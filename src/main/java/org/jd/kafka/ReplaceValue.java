@@ -17,6 +17,11 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Convert value in record.
+ *
+ * @param <R> record type
+ */
 public abstract class ReplaceValue<R extends ConnectRecord<R>> implements Transformation<R> {
 
     public static final String FIELD_KEY = "field";
@@ -28,8 +33,10 @@ public abstract class ReplaceValue<R extends ConnectRecord<R>> implements Transf
                     "Field to replace. Use empty string to match whole value against regex pattern. The transformation will try to convert replaced value to target type. If such" +
                             " conversion is not supported, an exception will be thrown. E.g. replacing structures, arrays, maps, or bytes is not supported.")
             .define(REGEX_KEY, ConfigDef.Type.STRING, ConfigDef.NO_DEFAULT_VALUE, new RegexValidator(), ConfigDef.Importance.HIGH, "Regex to match value against.")
-            .define(REPLACEMENT_KEY, ConfigDef.Type.STRING, ConfigDef.NO_DEFAULT_VALUE, new ConfigDef.NonNullValidator(), ConfigDef.Importance.HIGH, "Replacement to use if value matches the regex. For more details os supported replacements, see documentation of <code>java.util.regex.Matcher#replaceFirst(String)</code> method.")
-            .define(CASE_SENSITIVE_KEY, ConfigDef.Type.BOOLEAN, Boolean.TRUE, ConfigDef.Importance.MEDIUM, "Set this to <code>false</code> if compiled pattern should be case insensitive. Default is <code>true</code>");
+            .define(REPLACEMENT_KEY, ConfigDef.Type.STRING, ConfigDef.NO_DEFAULT_VALUE, new ConfigDef.NonNullValidator(), ConfigDef.Importance.HIGH, "Replacement to use if value" +
+                    " matches the regex. For more details os supported replacements, see documentation of <code>java.util.regex.Matcher#replaceFirst(String)</code> method.")
+            .define(CASE_SENSITIVE_KEY, ConfigDef.Type.BOOLEAN, Boolean.TRUE, ConfigDef.Importance.MEDIUM, "Set this to <code>false</code> if compiled pattern should be case " +
+                    "insensitive. Default is <code>true</code>");
 
     private String field;
     private boolean wholeValue;
@@ -73,6 +80,14 @@ public abstract class ReplaceValue<R extends ConnectRecord<R>> implements Transf
         }
     }
 
+    /**
+     * Check, if string representation of input value matches against regex. If yes, replace with replacement and then try to convert to same type as input.
+     * If value does not match, original vlaue is returned.
+     *
+     * @param in input value
+     * @return replaced and converted value
+     * @see #convert(Class, String)
+     */
     Object replaceAndConvert(Object in) {
         if (in == null) {
             return null;
@@ -88,6 +103,12 @@ public abstract class ReplaceValue<R extends ConnectRecord<R>> implements Transf
         return in;
     }
 
+    /**
+     * Apply replacement to record with schema (i.e. {@link Struct}).
+     *
+     * @param record to process
+     * @return new record with replaced value
+     */
     R applyWithSchema(R record) {
         Struct struct = Requirements.requireStruct(value(record), "Value replacement");
         Struct target = new Struct(schema(record));
@@ -103,6 +124,15 @@ public abstract class ReplaceValue<R extends ConnectRecord<R>> implements Transf
         return newRecord(record, target);
     }
 
+    /**
+     * Convert string to desired class.
+     *
+     * @param cls   desired class
+     * @param value to convert
+     * @return converted value
+     * @throws UnsupportedTargetTypeException if target class is not supported
+     * @throws TypeConversionException        if conversion failed (e.g. cannot parse a number)
+     */
     Object convert(Class<?> cls, String value) {
         try {
             if (cls == Boolean.class) {
@@ -129,6 +159,12 @@ public abstract class ReplaceValue<R extends ConnectRecord<R>> implements Transf
         }
     }
 
+    /**
+     * Apply replacement to data without schema (i.e. a {@link Map}).
+     *
+     * @param record input record
+     * @return record with replaced value
+     */
     R applyNoSchema(R record) {
         Map<String, Object> data = Requirements.requireMap(value(record), "Value replacement");
         HashMap<String, Object> target = new HashMap<>();
@@ -144,14 +180,39 @@ public abstract class ReplaceValue<R extends ConnectRecord<R>> implements Transf
         return newRecord(record, target);
     }
 
+    /**
+     * Apply replacement to whole value (i.e. take input, convert it to string, replace and try to convert back).
+     *
+     * @param record input record
+     * @return record with replaced value
+     */
     R applyWholeValue(R record) {
         return newRecord(record, replaceAndConvert(value(record)));
     }
 
+    /**
+     * Get record schema.
+     *
+     * @param record record
+     * @return record schema (nullable)
+     */
     abstract Schema schema(R record);
 
+    /**
+     * Get record value.
+     *
+     * @param record record
+     * @return record value (nullable)
+     */
     abstract Object value(R record);
 
+    /**
+     * Create new record with new, replace, value.
+     *
+     * @param record       original record
+     * @param updatedValue updated value
+     * @return new record with replaced value
+     */
     abstract R newRecord(R record, Object updatedValue);
 
     @Override
@@ -159,6 +220,11 @@ public abstract class ReplaceValue<R extends ConnectRecord<R>> implements Transf
         // no-op
     }
 
+    /**
+     * Apply to key.
+     *
+     * @param <R> record type
+     */
     public static class Key<R extends ConnectRecord<R>> extends ReplaceValue<R> {
 
         @Override
@@ -177,6 +243,11 @@ public abstract class ReplaceValue<R extends ConnectRecord<R>> implements Transf
         }
     }
 
+    /**
+     * Apply to value.
+     *
+     * @param <R> record type
+     */
     public static class Value<R extends ConnectRecord<R>> extends ReplaceValue<R> {
 
         @Override
