@@ -10,11 +10,16 @@ import org.jd.kafka.exception.UnsupportedTargetTypeException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Answers;
 import org.mockito.Mockito;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 class ReplaceValueTest {
 
@@ -22,6 +27,7 @@ class ReplaceValueTest {
 
     @BeforeEach
     void beforeEach() {
+        // some defaults
         configureSpy(Map.of(ReplaceValue.FIELD_KEY, "fld", ReplaceValue.REPLACEMENT_KEY, "target", ReplaceValue.REGEX_KEY, "^source$"));
     }
 
@@ -164,24 +170,29 @@ class ReplaceValueTest {
         Assertions.assertSame(outRec, test.applyWholeValue(sr));
     }
 
-    @Test
-    void convert() {
-        Assertions.assertAll(
-                () -> Assertions.assertEquals(Boolean.TRUE, test.convert(Boolean.class, "true")),
-                () -> Assertions.assertEquals(Boolean.FALSE, test.convert(Boolean.class, "false")),
-                () -> Assertions.assertEquals((byte) 10, test.convert(Byte.class, "10")),
-                () -> Assertions.assertEquals((byte) -10, test.convert(Byte.class, "-10")),
-                () -> Assertions.assertEquals((short) 20, test.convert(Short.class, "20")),
-                () -> Assertions.assertEquals((short) -20, test.convert(Short.class, "-20")),
-                () -> Assertions.assertEquals(30, test.convert(Integer.class, "30")),
-                () -> Assertions.assertEquals(-30, test.convert(Integer.class, "-30")),
-                () -> Assertions.assertEquals(40L, test.convert(Long.class, "40")),
-                () -> Assertions.assertEquals(-40L, test.convert(Long.class, "-40")),
-                () -> Assertions.assertEquals(12.23f, test.convert(Float.class, "12.23")),
-                () -> Assertions.assertEquals(-12.23f, test.convert(Float.class, "-12.23")),
-                () -> Assertions.assertEquals(65.54, test.convert(Double.class, "65.54")),
-                () -> Assertions.assertEquals(-65.54, test.convert(Double.class, "-65.54")),
-                () -> Assertions.assertEquals("abc", test.convert(String.class, "abc")));
+    @ParameterizedTest
+    @MethodSource("convertSource")
+    void convert(Object expected, Class<?> target, String toConvert) {
+        Assertions.assertEquals(expected, test.convert(target, toConvert));
+    }
+
+    static Stream<Arguments> convertSource() {
+        return Stream.of(
+                Arguments.of(Boolean.TRUE, Boolean.class, "true"),
+                Arguments.of(Boolean.FALSE, Boolean.class, "false"),
+                Arguments.of((byte) 10, Byte.class, "10"),
+                Arguments.of((byte) -10, Byte.class, "-10"),
+                Arguments.of((short) 20, Short.class, "20"),
+                Arguments.of((short) -20, Short.class, "-20"),
+                Arguments.of(30, Integer.class, "30"),
+                Arguments.of(-30, Integer.class, "-30"),
+                Arguments.of(40L, Long.class, "40"),
+                Arguments.of(-40L, Long.class, "-40"),
+                Arguments.of(12.23f, Float.class, "12.23"),
+                Arguments.of(-12.23f, Float.class, "-12.23"),
+                Arguments.of(65.54, Double.class, "65.54"),
+                Arguments.of(-65.54, Double.class, "-65.54"),
+                Arguments.of("abc", String.class, "abc"));
     }
 
     @Test
