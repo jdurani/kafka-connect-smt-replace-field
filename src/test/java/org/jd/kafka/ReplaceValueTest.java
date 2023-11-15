@@ -110,6 +110,20 @@ class ReplaceValueTest {
         Assertions.assertEquals("converted", test.replaceAndConvert("source"));
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "a,b,c,c",
+            "a,b,a,b",
+            "a,b,,",
+            "a([bc]+).*,$1d,b,b",
+            "a([bc]+).*,$1d,c,c",
+            "a([bc]+).*,$1d,ac,cd",
+    })
+    void replaceRegex(String pattern, String replacement, String in, String expected) {
+        configureSpy(Map.of(ReplaceValue.FIELD_KEY, "fld", ReplaceValue.REPLACEMENT_KEY, replacement, ReplaceValue.REGEX_KEY, pattern));
+        Assertions.assertEquals(expected, test.replaceAndConvert(in));
+    }
+
     @Test
     void applyWithSchemaMethod() {
         SinkRecord in = Mockito.mock(SinkRecord.class);
