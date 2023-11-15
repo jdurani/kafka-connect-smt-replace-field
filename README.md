@@ -43,3 +43,23 @@ Plugin is installed as standard Kafka connect plugins. It requires no other libr
 | `regex`         | Pattern | -             | Regex to match value. This is standard Java Pattern.                                                        |
 | `replacement`   | String  | -             | Replacement string. For more details of supported format see `java.util.regex.Matcher#replaceFirst(String)` |
 | `caseSensitive` | Boolean | `true`        | Set this to `false` if compiled pattern should be case insensitive.                                         |
+
+## Sample configuration
+### Value
+```properties
+"transforms": "replace"
+"transforms.replace.type": "org.jd.kafka.ReplaceValue$Value"
+"transforms.replace.field": "user-field-1"
+"transforms.replace.regex": "^abc([123]).*$"
+"transforms.replace.replacement": "repl-$1"
+```
+
+### Key
+```properties
+"transforms": "replace"
+"transforms.replace.type": "org.jd.kafka.ReplaceValue$Key"
+"transforms.replace.field": ""
+"transforms.replace.regex": "^pk-(.*)$"
+"transforms.replace.replacement": "$1"
+"transforms.replace.caseSensitive": "false"
+```
